@@ -1,0 +1,3 @@
+use LoCare;
+
+db.dropDatabase();

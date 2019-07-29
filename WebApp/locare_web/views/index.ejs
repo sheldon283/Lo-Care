@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Locare</title>
+  <meta name="viewport" content="initial-scale=1.0">
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="stylesheets/style.css">
+  <link rel="stylesheet" href="https://bootswatch.com/4/materia/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+  <!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <script src="/scripts/combodate.js"></script> -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <img src="/images/logo.png" style="height: 50px; width: 50px;" onclick="toggleNav()">
+    <div class="container-fluid">
+      <h1 class=" navbar-brand" id="sideBar">Welcome to LoCare</h1>
+    </div>
+  </nav>
+
+  <div id="mySidenav" class="sidenav">
+    <br>
+    <br>
+    <br>
+    <br>
+    <h2>
+      <span style="color: white">
+        Enter a unique id to get started!
+      </span>
+    </h2>
+    <br>
+    <br>
+    <input id="pac-input" class="controls" type="text" placeholder="Search unique ID">
+    <br>
+    <br> (OPTIONAL) Choose timeframe:
+    <input type="checkbox" id="dateCheck" name="datetimes" />
+    <br>
+    <input type="button" id="searchBtn" value="Search" onclick="deleteMarkers(); handleInput('');" class="btn btn-primary" />
+    <br>
+    <br>
+
+
+    <input type="button" id="stopPeriodicUpdates" value="Stop Periodic Updates" onclick="stopPeriodicUpdates();" class="btn btn-warning"
+    />
+    <br>
+    <br>
+    <input type="button" id="restartPeriodicUpdates" value="Restart Periodic Updates" onclick="restartPeriodicUpdates();" class="btn btn-warning"
+    />
+    <!-- <input type="button" id="postBtn" value="Post New Data" onclick="postStuff();" /> -->
+    <br>
+    <br>
+    <input type="button" id="deleteBtn" value="Delete All Data" onclick="deleteAllData('');" class="btn btn-danger" />
+  </div>
+
+  <div class="main">
+    <div id="map"></div>
+  </div>
+
+  <script>
+
+    $(function () {
+      $('input[name="datetimes"]').daterangepicker({
+        startDate: "05/23/2018",
+        endDate: "05/29/2018",
+        opens: 'left'
+      });
+    });
+
+    // $(function() {
+    //   $('input[name="datetimes"]').daterangepicker({
+    //     timePicker: true,
+    //     startDate: "05/23/2018",
+    //     endDate: "05/29/2018"
+    //   });
+    // });  
+
+    $('input[name="datetimes"]').on('showCalendar.daterangepicker', function (ev, picker) {
+      startDate = picker.startDate.format('YYYY-MM-DD');
+      endDate = picker.endDate.format('YYYY-MM-DD');
+
+      console.log(startDate);
+      console.log(endDate);
+    });
+
+    $('input[name="datetimes"]').on('apply.daterangepicker', function (ev, picker) {
+      startDate = picker.startDate.format('YYYY-MM-DD');
+      endDate = picker.endDate.format('YYYY-MM-DD');
+
+      console.log(startDate);
+      console.log(endDate);
+    });
+
+    var jsonResp;
+    var currentUser = '';
+    var startDate;
+    var endDate;
+
+    var navCount = 0;
+    function toggleNav() {
+      if (navCount % 2 == 0) {
+        document.getElementById("mySidenav").style.width = "330px";
+        document.getElementById("mySidenav").style.paddingLeft = "2.5vw";
+      }
+      else {
+        document.getElementById("mySidenav").style.width = "0";
+        document.getElementById("mySidenav").style.paddingLeft = "0";
+      }
+      navCount++;
+    }
+
+    $("#pac-input").keyup(function (event) {
+      if (event.keyCode === 13) {
+        $("#searchBtn").click();
+      }
+    });
+
+    var map;
+    var markers = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 34.069633, lng: -118.444275 },
+        zoom: 15
+      });
+    }
+
+    var timeOut;
+
+    function periodicUpdate() {
+      handleInput();
+    }
+
+    function restartPeriodicUpdates() {
+
+      if (jsonResp == null) {
+        stopPeriodicUpdates();
+      } else {
+        if ((currentUser != '') || (jsonResp.length != 0)) {
+          // handleInput('');
+          timeOut = setTimeout(periodicUpdate, 1000);
+        } else {
+          stopPeriodicUpdates();
+        }
+      }
+    }
+
+    function stopPeriodicUpdates() {
+      clearTimeout(timeOut);
+    }
+
+    // TODO: Uncomment and add button for this!
+    //renderStep();
+
+
+    /*function postStuff() {
+      let data = {};
+      data.uniqueid ="Sahil";
+      data.timestamp = 12124124238;
+      data.longitude = -118.3437;
+      data.latitude = 34.0562;
+      //data = JSON.stringify(data);
+      console.log(data);
+      jQuery.ajax({
+        url: '/api/newLoc',
+        type:"POST",
+        data: JSON.stringify(data),
+        contentType:"application/json; charset=utf-8",
+        success: function (resp) {
+          console.log(resp);
+        },
+        error: function () {
+          console.log("error");
+        }
+      });
+    }*/
+
+
+
+    function deleteAllData(elem) {
+      var value = '';
+      stopPeriodicUpdates()
+      if (elem == '') {
+        value = document.getElementById('pac-input').value;
+      }
+      else {
+        value = currentUser;
+      }
+
+      var getStringValue = '/api/deleteAllLoc?uniqueid=' + value;
+
+
+      console.log(getStringValue);
+
+      $.ajax({
+        type: "DELETE",
+        url: getStringValue,
+        // data: "name=someValue",
+        success: function (msg) {
+          alert("Data Deleted: " + msg);
+        }
+      });
+
+      deleteMarkers();
+    }
+
+
+    function handleInput(elem) {
+      stopPeriodicUpdates();
+      var value = '';
+
+      value = document.getElementById('pac-input').value;
+
+      if (value == '') {
+        alert("Please enter a valid ID");
+      } else {
+        var getStringValue = '/api/getLoc?uniqueid=' + value;
+        currentUser = value;
+
+        $.ajax({
+          url: getStringValue,
+          async: false,
+          dataType: 'json',
+          success: function (resp) {
+            jsonResp = resp;
+          }
+        });
+
+        var count = jsonResp.length;
+        if (count == 0) {
+          alert("USER ID NOT FOUND!");
+        } else {
+          if (document.getElementById('dateCheck').checked) {
+            console.log(jsonResp);
+
+            var startMs = moment(startDate).unix().valueOf();
+            var endMs = moment(endDate).unix().valueOf();
+
+            // console.log(moment.unix(startMs).format('dddd, MMMM Do, YYYY h:mm:ss A'));
+            // console.log(moment.unix(startMs).format('dddd, MMMM Do, YYYY h:mm:ss A'));
+
+            restartPeriodicUpdates();
+            for (var i = 0; i < count; i++) {
+              // console.log("startMs: " + startMs);
+              // console.log("endMs: " + endMs);
+              // console.log("Timestamp: " + jsonResp[i].timestamp);
+
+              // console.log(">=: " + jsonResp[i].timestamp >= startMs);
+              // console.log("<= : " + jsonResp[i].timestamp <= endMs)
+
+              if (jsonResp[ i ].timestamp >= startMs && jsonResp[ i ].timestamp <= endMs) {
+                //console.log("aseg");
+                var latitude = Number(jsonResp[ i ].latitude);
+                var longitude = Number(jsonResp[ i ].longitude);
+                var location = { lat: latitude, lng: longitude };
+                var time = moment.unix(jsonResp[ i ].timestamp).format("DD MMM YYYY hh:mm a") //parse integer
+
+                addMarker(location, map, time);
+
+                // var newLoc = { lat: 34.069633, lng: -118.444275 };
+                // addMarker(newLoc, map);
+              }
+            }
+
+          } else {
+
+            restartPeriodicUpdates();
+            for (var i = 0; i < count; i++) {
+              var latitude = Number(jsonResp[ i ].latitude);
+              var longitude = Number(jsonResp[ i ].longitude);
+              var location = { lat: latitude, lng: longitude };
+              var time = moment.unix(jsonResp[ i ].timestamp).format("DD MMM YYYY hh:mm a") //parse integer
+
+              addMarker(location, map, time);
+
+              // var newLoc = { lat: 34.069633, lng: -118.444275 };
+              // addMarker(newLoc, map);
+            }
+          }
+        }
+      }
+    }
+
+    // Sets the map on all markers in the array.
+    function setMapOnAll(map) {
+      for (var i = 0; i < markers.length; i++) {
+        markers[ i ].setMap(map);
+      }
+    }
+
+    // Removes the markers from the map, but keeps them in the array.
+    function clearMarkers() {
+      setMapOnAll(null);
+    }
+
+    // Deletes all markers in the array by removing references to them.
+    function deleteMarkers() {
+      clearMarkers();
+      markers = [];
+    }
+
+    // Adds a marker to the map.
+    function addMarker(location, map, time) {
+
+      // Add the marker at the clicked location, and add the next-available label
+      // from the array of alphabetical characters.
+      var marker = new google.maps.Marker({
+        position: location,
+        // label: labels[labelIndex++ % labels.length],
+        map: map
+      });
+      markers.push(marker);
+
+      var location = "Location: " + marker.getPosition() + "<br />" + "Time: " + time;
+      var infowindow = new google.maps.InfoWindow({
+        content: location
+      });
+
+      marker.addListener('mouseover', function () {
+        infowindow.open(map, marker);
+      });
+
+      marker.addListener('mouseout', function () {
+        infowindow.close();
+      });
+    }
+
+
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCNj-YsCIOTmbGfofgV6o4D8Ct39hVAbqI&callback=initMap" async
+    defer></script>
+</body>
+
+</html>
